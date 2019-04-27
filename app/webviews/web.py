@@ -6,6 +6,7 @@ isbn搜索：http://t.yushu.im/v2/book/isbn/{isbn}
 
 from flask import jsonify, request
 
+from app.forms.book import SearchForm
 from . import web
 from app.bookstore.book import BookStore
 from app.tools.helper import is_isbn_or_key
@@ -19,14 +20,17 @@ def search():
     :return:
     '''
 
-    q = request.args.get('q')
-    page = request.args.get('page')
+    form = SearchForm(request.args)
+    if form.validate():
+        q = form.q.data.strip()
+        page = form.page.data
+        isbn_or_key = is_isbn_or_key(q)
 
-    isbn_or_key = is_isbn_or_key(q)
+        if isbn_or_key == 'key':
+            result = BookStore.search_by_keyword(q, page)
+        else:
+            result = BookStore.search_by_isbn(q)
 
-    if isbn_or_key == 'key':
-        result = BookStore.search_by_keyword(q)
+        return jsonify(result)
     else:
-        result = BookStore.search_by_isbn(q)
-
-    return jsonify(result)
+        return jsonify({'msg': form.errors})
